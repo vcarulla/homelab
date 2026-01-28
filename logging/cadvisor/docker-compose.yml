@@ -1,0 +1,35 @@
+---
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    profiles:
+      - disabled
+    env_file:
+      - ../../.env
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - frontend
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    pid: host
+    restart: unless-stopped
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

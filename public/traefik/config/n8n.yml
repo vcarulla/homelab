@@ -1,0 +1,22 @@
+# Traefik configuration for n8n
+# Copy to: traefik/config/n8n.yml
+# Replace IPs and domains with your values
+
+---
+http:
+  routers:
+    n8n:
+      rule: "Host(`n8n.automation.example.com`)"
+      entrypoints:
+        - "websecure"
+      service: "n8n-service"
+      tls: true
+      middlewares:
+        - "internal-access@file"
+        - "security-headers@file"
+
+  services:
+    n8n-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.60:5678"

@@ -1,0 +1,40 @@
+services:
+  promtail:
+    image: grafana/promtail:3.5.0
+    container_name: promtail
+    profiles:
+      - disabled
+    env_file:
+      - ../../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/config.yml:/etc/promtail/config.yml:ro
+      # Traefik logs
+      - ../../traefik/logs:/var/log/traefik:ro
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep promtail || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    command:
+      - -config.file=/etc/promtail/config.yml
+      - -log.format=json
+    restart: unless-stopped
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

@@ -1,0 +1,52 @@
+---
+services:
+  portainer:
+    image: portainer/portainer-ce:2.33.6
+    container_name: portainer
+    # Portainer loads secrets from Shared Vault Agent tmpfs
+    # Variables available from vault_secrets_tmpfs:/run/secrets:ro
+    command:
+      - "--host=tcp://socket-proxy:2375"  # Usar Socket Proxy en lugar de socket Unix directo
+      # - "--admin-password-file=/run/secrets/portainer-admin-password"  # Admin password desde Vault - Solo necesario en primera inicialización
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - portainer_data:/data
+      - vault_secrets_tmpfs:/run/secrets:ro  # Tmpfs encriptado del Shared Vault Agent
+    networks:
+      - frontend
+      - backend  # Acceso a socket-proxy
+    healthcheck:
+      test: ["CMD", "/portainer", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_ICARUS}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.docker.network=frontend"
+    restart: always
+
+volumes:
+  portainer_data:
+    driver: local
+  vault_secrets_tmpfs:
+    external: true
+    name: shared-vault-agent_vault_secrets_tmpfs
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

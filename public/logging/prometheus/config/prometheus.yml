@@ -1,0 +1,77 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: 'homelab'
+    region: 'your-region'
+    instance: 'main-server'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093  # Uncomment if using Alertmanager
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9090']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'prometheus_config_last_reload_success_timestamp_seconds'
+        action: drop
+
+  - job_name: 'node_exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['MAIN_SERVER_IP:9100']
+        labels:
+          host: 'main-server'
+          role: 'docker-host'
+      - targets: ['PROXMOX_IP:9100']
+        labels:
+          host: 'proxmox'
+          role: 'proxmox-host'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'node_(cpu_seconds_total|memory_.*|filesystem_.*|network_.*|load.*|up)'
+        action: keep
+
+  - job_name: 'cadvisor'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_(cpu_usage_seconds_total|memory_usage_bytes|network_.*|fs_.*|spec_.*)'
+        action: keep
+      - source_labels: [container_label_com_docker_compose_service]
+        regex: ''
+        action: drop
+
+  - job_name: 'traefik'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['traefik:9090']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'traefik_(requests_total|request_duration_seconds.*|entrypoint_.*)'
+        action: keep
+
+  - job_name: 'grafana'
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+
+  - job_name: 'loki'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: '/metrics'

@@ -1,0 +1,29 @@
+services:
+  node_exporter:
+    container_name: node_exporter
+    image: quay.io/prometheus/node-exporter:v1.9.1
+    profiles:
+      - disabled
+    env_file:
+      - ../../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /:/host:ro,rslave
+    network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep node_exporter || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    pid: host
+    command:
+      - --path.rootfs=/host
+    restart: unless-stopped

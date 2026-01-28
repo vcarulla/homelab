@@ -1,0 +1,57 @@
+services:
+  linkding:
+    image: sissbruecker/linkding:1.44.1
+    container_name: "${LD_CONTAINER_NAME:-linkding}"
+    entrypoint: >
+      sh -c "
+      echo '🚀 Linkding iniciando con Shared Vault Agent...';
+      if [ -f /run/secrets/linkding.env ]; then
+        echo '📋 Cargando secrets desde Shared Vault Agent...';
+        export \$(grep -v '^#' /run/secrets/linkding.env | grep -v '^VAULT_' | xargs);
+        echo '✅ Variables cargadas desde Shared Vault Agent';
+      else
+        echo '⚠️ Esperando secrets de Shared Vault Agent...';
+        sleep 5;
+      fi;
+      exec python manage.py runserver 0.0.0.0:9090
+      "
+    env_file:
+      - ../.env
+    environment:
+      - TIME_ZONE=${TZ}
+      - TZ=${TZ}
+    volumes:
+      - "${LD_HOST_DATA_DIR:-./data}:/etc/linkding/data"
+      - vault_secrets_tmpfs:/run/secrets:ro  # Tmpfs encriptado del Shared Vault Agent
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9090')"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.linkding.rule=Host(`linkding.${DOMAIN_ICARUS}`)"
+      - "traefik.http.routers.linkding.entrypoints=websecure"
+      - "traefik.http.routers.linkding.tls=true"
+      - "traefik.http.services.linkding.loadbalancer.server.port=9090"
+      - "traefik.docker.network=frontend"
+    restart: unless-stopped
+
+volumes:
+  linkding_data:
+    driver: local
+  vault_secrets_tmpfs:
+    external: true
+    name: shared-vault-agent_vault_secrets_tmpfs
+networks:
+  frontend:
+    external: true

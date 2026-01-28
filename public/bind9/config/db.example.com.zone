@@ -1,0 +1,28 @@
+$TTL 3600 ; 1 hour
+$ORIGIN YOUR_DOMAIN.
+
+@ IN  SOA ns.YOUR_DOMAIN. hostmaster.YOUR_DOMAIN. (
+        2026010603    ; serial (YYYYMMDDNN)
+        3600          ; refresh (1 hour)
+        1800          ; retry (30 minutes)
+        604800        ; expire (1 week)
+        3600          ; minimum ttl (1 hour)
+)
+
+    IN  NS  ns
+
+ns              IN  A   MAIN_SERVER_IP    ; DNS server
+
+; servers
+main-server     IN  A   MAIN_SERVER_IP    ; main server (traefik, vault, etc)
+proxmox1        IN  A   MAIN_SERVER_IP    ; proxmox via traefik (backend: PROXMOX1_IP:8006)
+proxmox2        IN  A   PROXMOX2_IP       ; proxmox node 2
+mediacli        IN  A   MEDIACLI_IP       ; mediacli stack
+other-vm        IN  A   OTHER_VM_IP       ; other VM
+
+; services via traefik
+hass            IN  A   MAIN_SERVER_IP    ; home assistant via traefik
+
+; wildcard DNS for automatic service discovery
+*.main-server   IN  A   MAIN_SERVER_IP    ; all services on main server
+*.mediacli      IN  A   MAIN_SERVER_IP    ; mediacli services via traefik

@@ -1,0 +1,57 @@
+---
+services:
+  clamav:
+    container_name: clamav
+    image: docker.io/clamav/clamav:1.5
+    profiles:
+      - disabled
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+      # ✅ SEGURIDAD: Variables para optimización ClamAV
+      - CLAMAV_NO_FRESHCLAMD=false
+      - CLAMAV_NO_CLAMD=false
+    volumes:
+      # 🦠 ANTIVIRUS: Acceso completo de lectura para escaneo efectivo
+      - /:/scan:ro  # Acceso completo al filesystem del host
+      - ./config/clamd.conf:/etc/clamav/clamd.conf:ro
+      - ./config/freshclam.conf:/etc/clamav/freshclam.conf:ro
+      - clamav-data:/var/lib/clamav
+
+  # 📊 STATS SERVER: Sidecar para Homepage integration
+  clamav-stats:
+    container_name: clamav-stats
+    image: python:3.14-alpine
+    profiles:
+      - disabled
+    command: ["sh", "-c", "apk add --no-cache wget && python3 /app/clamav-webserver.py"]
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./clamav-stats.py:/app/clamav-stats.py:ro
+      - ./clamav-webserver.py:/app/clamav-webserver.py:ro
+      - /var/log/clamav-scans:/var/log/clamav-scans:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q python3 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  clamav-data:
+
+networks:
+  backend:
+    external: true
+  frontend:
+    external: true
+

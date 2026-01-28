@@ -1,0 +1,51 @@
+services:
+  loki:
+    container_name: loki
+    image: docker.io/grafana/loki:3.5.1
+    profiles:
+      - disabled
+    env_file:
+      - ../../.env
+    environment:
+      - TZ=${TZ}
+    command:
+      - "-config.file=/etc/loki/config.yml"
+    volumes:
+      # Monta tu archivo de configuración en el contenedor
+      - ./config/config.yml:/etc/loki/config.yml:ro
+      # Volumen para datos (índices y chunks)
+      - data_loki:/loki:rw
+      - data_loki:/wal:rw
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`loki.${DOMAIN_DEDALO}`)"
+      - "traefik.http.routers.loki.entrypoints=websecure"
+      - "traefik.http.routers.loki.tls.certresolver=cloudflare"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      - "traefik.docker.network=frontend"
+    restart: unless-stopped
+
+volumes:
+  data_loki:
+    driver: local
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

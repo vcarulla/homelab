@@ -1,0 +1,31 @@
+# Traefik configuration for Proxmox
+# Copy to: traefik/config/proxmox.yml
+# Replace IPs and domains with your values
+
+---
+http:
+  routers:
+    # Proxmox Web UI Router
+    proxmox:
+      rule: "Host(`proxmox.example.com`)"
+      entrypoints:
+        - "websecure"
+      service: "proxmox-service"
+      tls: true
+      middlewares:
+        - "internal-access@file"
+        - "security-headers@file"
+
+  services:
+    # Proxmox Service Configuration
+    proxmox-service:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.1.10:8006"
+        serversTransport: "proxmox-transport"
+
+  serversTransports:
+    # Transport configuration for Proxmox HTTPS
+    proxmox-transport:
+      serverName: "proxmox.example.com"
+      insecureSkipVerify: true  # Skip cert verification for self-signed Proxmox cert

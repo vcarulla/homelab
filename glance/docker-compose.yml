@@ -1,0 +1,48 @@
+services:
+  glance:
+    container_name: glance
+    image: glanceapp/glance:v0.8.4
+    entrypoint: >
+      sh -c "
+      echo '🔭 Glance iniciando...';
+      if [ -f /run/secrets/glance.env ]; then
+        echo '🔐 Cargando secretos desde Vault Agent...';
+        export \$$(grep -v '^#' /run/secrets/glance.env | grep -v '^VAULT_' | xargs);
+        echo '✅ Variables de API cargadas desde Vault';
+      else
+        echo '⚠️ Vault Agent no disponible - widgets con API deshabilitados';
+      fi;
+      exec /app/glance --config /app/config/glance.yml;
+      "
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - vault_secrets_tmpfs:/run/secrets:ro
+    networks:
+      - frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glance.rule=Host(`glance.${DOMAIN_ICARUS}`)"
+      - "traefik.http.routers.glance.entrypoints=websecure"
+      - "traefik.http.routers.glance.tls=true"
+      - "traefik.http.services.glance.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  vault_secrets_tmpfs:
+    external: true
+    name: shared-vault-agent_vault_secrets_tmpfs
+
+networks:
+  frontend:
+    external: true

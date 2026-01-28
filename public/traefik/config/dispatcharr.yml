@@ -1,0 +1,17 @@
+# Traefik configuration for Dispatcharr
+# Copy to: traefik/config/dispatcharr.yml
+# Replace IPs and domains with your values
+
+http:
+  routers:
+    dispatcharr:
+      rule: "Host(`dispatcharr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "dispatcharr-service"
+      tls: true
+
+  services:
+    dispatcharr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:9192"

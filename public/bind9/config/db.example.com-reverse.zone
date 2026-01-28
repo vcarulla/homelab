@@ -1,0 +1,21 @@
+$TTL 3600 ; 1 hour
+$ORIGIN 1.168.192.in-addr.arpa.
+
+@   IN SOA  ns.example.com. hostmaster.example.com. (
+        2026010603 ; serial
+        3600       ; refresh (1 hour)
+        1800       ; retry (30 minutes)
+        604800     ; expire (1 week)
+        3600       ; minimum ttl (1 hour)
+)
+
+    IN NS   ns.example.com.
+
+; PTR records: IP → nombre
+; Replace IPs with your actual last octets
+10  IN PTR  ns.example.com.
+10  IN PTR  server1.example.com.
+20  IN PTR  server2.example.com.
+30  IN PTR  proxmox1.example.com.
+40  IN PTR  proxmox2.example.com.
+50  IN PTR  nas.example.com.

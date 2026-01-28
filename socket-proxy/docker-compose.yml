@@ -1,0 +1,67 @@
+# ~/hlab/socket-proxy/docker-compose.yml
+
+services:
+  socket-proxy:
+    container_name: socket-proxy
+    image: tecnativa/docker-socket-proxy:v0.4.2
+    
+    # --- HARDENING DE SEGURIDAD ENTERPRISE ---
+    read_only: true  # Filesystem solo lectura, previene modificaciones maliciosas
+    security_opt:
+      - no-new-privileges:true  # Bloquea escalación de privilegios dentro del container
+    cap_drop:
+      - ALL  # Elimina todas las capabilities de Linux (permisos kernel)
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=10m  # Directorio temporal en memoria, sin ejecución
+      - /run:rw,noexec,nosuid,size=10m  # Directorio para pidfiles de HAProxy
+    
+    environment:
+      # --- PERMISOS DE SOLO LECTURA ---
+      # 1 = Habilitado, 0 = Deshabilitado (por defecto)
+
+      # Habilitar acceso a eventos de Docker (necesario para service discovery)
+      - EVENTS=1
+      # Habilitar acceso para listar contenedores (necesario para service discovery)
+      - CONTAINERS=1
+      # Habilitar acceso a la info general del sistema
+      - INFO=1
+      # Habilitar acceso al ping (usado por muchos servicios para ver si está vivo)
+      - PING=1
+      # Habilitar acceso a la versión de Docker
+      - VERSION=1
+      # Habilitar acceso a las redes de Docker (necesario para service discovery)
+      - NETWORKS=1
+      # Habilitar acceso a servicios Docker (metadata para labels automáticos)
+      - SERVICES=1
+      # Habilitar acceso a imágenes Docker (solo lectura, para monitoring)
+      - IMAGES=1
+      # Habilitar acceso a volúmenes Docker (solo lectura, para monitoring)
+      # RIESGO: Expone nombres de servicios y paths, pero no contenido de datos
+      # Para revertir: comentar línea siguiente y reiniciar socket-proxy
+      - VOLUMES=1
+
+      # --- VERIFICACIÓN DE SEGURIDAD ---
+      # Asegurarse de que todas las demás llamadas (crear, borrar, ejecutar) están deshabilitadas.
+      # La imagen lo hace por defecto, pero ser explícito no está de más.
+      - POST=0 # Bloquea la mayoría de las acciones de escritura
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2375 || exit 1"]  # Verificar puerto TCP del proxy
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    restart: unless-stopped
+
+networks:
+  backend:
+    external: true

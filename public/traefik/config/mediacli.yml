@@ -1,0 +1,161 @@
+# Traefik configuration for media server stack
+# Copy to: traefik/config/mediacli.yml
+# Replace IPs and domains with your values
+
+http:
+  routers:
+    # Media Servers
+    plex:
+      rule: "Host(`plex.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "plex-service"
+      tls: true
+
+    emby:
+      rule: "Host(`emby.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "emby-service"
+      tls: true
+
+    # *arr Stack
+    sonarr:
+      rule: "Host(`sonarr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "sonarr-service"
+      tls: true
+
+    radarr:
+      rule: "Host(`radarr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "radarr-service"
+      tls: true
+
+    prowlarr:
+      rule: "Host(`prowlarr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "prowlarr-service"
+      tls: true
+
+    bazarr:
+      rule: "Host(`bazarr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "bazarr-service"
+      tls: true
+
+    # Indexers
+    jackett:
+      rule: "Host(`jackett.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "jackett-service"
+      tls: true
+
+    flaresolverr:
+      rule: "Host(`flaresolverr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "flaresolverr-service"
+      tls: true
+
+    # Download
+    qbittorrent:
+      rule: "Host(`qbittorrent.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "qbittorrent-service"
+      tls: true
+
+    # Request Management
+    jellyseerr:
+      rule: "Host(`jellyseerr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "jellyseerr-service"
+      tls: true
+
+    ombi:
+      rule: "Host(`ombi.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "ombi-service"
+      tls: true
+
+    requestrr:
+      rule: "Host(`requestrr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "requestrr-service"
+      tls: true
+
+    # Dashboard
+    homarr:
+      rule: "Host(`homarr.media.example.com`)"
+      entrypoints: ["websecure"]
+      service: "homarr-service"
+      tls: true
+
+  services:
+    # Media Servers
+    plex-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:32400"
+
+    emby-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:8096"
+
+    # *arr Stack
+    sonarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:8989"
+
+    radarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:7878"
+
+    prowlarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:9696"
+
+    bazarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:6767"
+
+    # Indexers
+    jackett-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:9117"
+
+    flaresolverr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:8191"
+
+    # Download
+    qbittorrent-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:8080"
+
+    # Request Management
+    jellyseerr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:5055"
+
+    ombi-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:3579"
+
+    requestrr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:4545"
+
+    # Dashboard
+    homarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.100:7575"

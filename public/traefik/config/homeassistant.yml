@@ -1,0 +1,28 @@
+# Traefik configuration for Home Assistant
+# Copy to: traefik/config/homeassistant.yml
+# Replace IPs and domains with your values
+
+---
+http:
+  routers:
+    homeassistant:
+      rule: "Host(`hass.example.com`)"
+      entrypoints:
+        - "websecure"
+      service: "homeassistant-service"
+      tls: true
+      middlewares:
+        - "internal-access@file"
+        - "security-headers@file"
+
+  services:
+    homeassistant-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.50:8123"
+        serversTransport: "homeassistant-transport"
+
+  serversTransports:
+    homeassistant-transport:
+      serverName: "hass.example.com"
+      insecureSkipVerify: false

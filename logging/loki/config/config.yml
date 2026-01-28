@@ -1,0 +1,54 @@
+# hlab/logging/loki/config/config.yml
+# Configuración moderna para Loki en modo single-node con retención.
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: info
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+# Configuración del esquema para usar boltdb-shipper
+schema_config:
+  configs:
+    - from: "2024-01-01" # Una fecha en el pasado es suficiente
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v12
+      index:
+        prefix: index_
+        period: 24h
+
+# Configuración de almacenamiento para boltdb-shipper
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    # No es necesario un "shared_store" en modo single-node filesystem
+  filesystem:
+    directory: /loki/chunks
+
+# El compactor es necesario para la retención
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  compaction_interval: 10m
+  delete_request_store: filesystem
+
+# Límites y período de retención
+limits_config:
+  retention_period: 168h # 7 días
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  allow_structured_metadata: false

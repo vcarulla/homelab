@@ -1,0 +1,17 @@
+# Traefik API configuration for external access (e.g., Glance dashboard)
+# Copy to: traefik/config/traefik-api.yml
+# Replace domain with your value
+
+---
+http:
+  routers:
+    # Router for Traefik API accessible from Glance
+    traefik-api:
+      rule: "Host(`traefik.server.example.com`) && PathPrefix(`/api`)"
+      entrypoints:
+        - "websecure"
+      service: "api@internal"
+      tls: true
+      middlewares:
+        - "api-access@file"  # Auth + allowed IPs
+      priority: 100  # Higher priority than dashboard

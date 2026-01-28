@@ -1,0 +1,13 @@
+# Traefik TLS Configuration
+# Copy to: traefik/config/tls.yml
+# Certificates are loaded from Vault Agent tmpfs
+
+tls:
+  certificates:
+    - certFile: /vault/secrets/certs/fullchain.crt  # From Shared Vault Agent tmpfs
+      keyFile: /vault/secrets/certs/server.key      # Certificates in encrypted memory
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /vault/secrets/certs/fullchain.crt
+        keyFile: /vault/secrets/certs/server.key

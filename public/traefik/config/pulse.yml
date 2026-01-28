@@ -1,0 +1,17 @@
+# Traefik configuration for Pulse
+# Copy to: traefik/config/pulse.yml
+# Replace IPs and domains with your values
+
+http:
+  routers:
+    pulse:
+      rule: "Host(`pulse.example.com`)"
+      entrypoints: ["websecure"]
+      service: "pulse-service"
+      tls: true
+
+  services:
+    pulse-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.70:7655"

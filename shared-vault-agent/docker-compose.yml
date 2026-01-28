@@ -1,0 +1,88 @@
+---
+# 🏠 SHARED VAULT AGENT - ENTERPRISE PATTERN
+# Un agente consolidado para todos los servicios del homelab
+# Creado: 2025-09-09
+
+services:
+  vault-agent-shared:
+    image: hashicorp/vault:1.21.1
+    container_name: homelab-vault-agent
+    user: "0:0"
+# Startup ordenado via healthcheck robusto y restart policy
+    # Security hardening para evitar escape de procesos
+    init: true  # ← Crucial: usar init system interno
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=10m
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo '🔧 Iniciando Shared Vault Agent para Homelab...'
+        echo '📋 Servicios: Glance, Linkding, Portainer, Traefik, Speedtest'
+
+        CREDS_OK=0
+        if [ -n "$$VAULT_ROLE_ID" ] && [ -n "$$VAULT_SECRET_ID" ]; then
+          echo '🔐 Usando credenciales desde variables de entorno...'
+          echo "$$VAULT_ROLE_ID" > /tmp/role-id
+          echo "$$VAULT_SECRET_ID" > /tmp/secret-id
+          CREDS_OK=1
+        fi
+
+        if [ "$$CREDS_OK" = "0" ] && [ -f /vault/config/role-id ] && [ -f /vault/config/secret-id ]; then
+          echo '📁 Usando credenciales desde archivos (fallback)...'
+          cp /vault/config/role-id /tmp/role-id
+          cp /vault/config/secret-id /tmp/secret-id
+          CREDS_OK=1
+        fi
+
+        if [ "$$CREDS_OK" = "0" ]; then
+          echo '❌ ERROR: No hay credenciales disponibles'
+          echo '   Ejecuta: ./scripts/vault-bootstrap.sh'
+          exit 1
+        fi
+
+        chmod 600 /tmp/role-id /tmp/secret-id
+        echo '✅ Credenciales listas en /tmp (tmpfs)'
+
+        export VAULT_SKIP_SETCAP=true
+        exec vault agent -config=/vault/config/agent.hcl -log-level=info
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_SKIP_SETCAP=true
+      - VAULT_ROLE_ID=${VAULT_SHARED_ROLE_ID:-}
+      - VAULT_SECRET_ID=${VAULT_SHARED_SECRET_ID:-}
+    volumes:
+      # Configuración (read-only)
+      - ./:/vault/config:ro
+      # Secrets compartidos en volumen tmpfs
+      - vault_secrets_tmpfs:/vault/secrets
+      # Speedtest Tracker secrets (archivo en disco, no tmpfs)
+      - ../speedtest-tracker:/vault/speedtest-tracker
+    networks:
+      - frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /vault/secrets/token && test -f /vault/secrets/glance.env && test -f /vault/secrets/linkding.env"]
+      interval: 15s
+      timeout: 10s
+      retries: 10  # Más reintentos para startup
+      start_period: 90s  # Más tiempo para que Vault esté unsealed
+
+volumes:
+  vault_secrets_tmpfs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=50m,uid=0,gid=0,mode=0700,noexec,nosuid
+
+networks:
+  frontend:
+    external: true

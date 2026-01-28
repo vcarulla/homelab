@@ -1,0 +1,66 @@
+---
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
+    profiles:
+      - disabled
+    env_file:
+      - ../../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN_DEDALO}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=cloudflare"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.docker.network=frontend" 
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'      # 15d default
+      - '--storage.tsdb.retention.size=2GB'      # Límite por tamaño
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'                 # Permite reload via API
+      - '--storage.tsdb.wal-compression'         # Compresión WAL
+      - '--query.max-concurrency=10'             # Optimizado para homelab
+      - '--query.timeout=2m'
+      - '--web.max-connections=256'              # Suficiente para homelab
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.3'
+          memory: 512M
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+    driver: local
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

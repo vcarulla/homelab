@@ -1,0 +1,65 @@
+services:
+  bind9:
+    container_name: dns_bind9
+    image: ubuntu/bind9:latest
+    read_only: false
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=50m
+      - /var/run:rw,noexec,nosuid,size=50m
+      - /var/cache/bind:rw,noexec,nosuid,size=100m
+      - /home/bind:rw,noexec,nosuid,size=10m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    environment:
+      - BIND9_USER=bind
+      - TZ="America/Argentina/Buenos_Aires"
+    working_dir: /tmp
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - ./config:/etc/bind:rw
+      - bind9_records:/var/lib/bind:rw
+      - bind9_work:/var/cache/bind/work:rw
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x named || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service={{.Name}},component=dns,environment=homelab"
+    restart: always
+
+volumes:
+  bind9_cache:
+    driver: local
+  bind9_records:
+    driver: local
+  bind9_work:
+    driver: local
+
+networks:
+  backend:
+    external: true
