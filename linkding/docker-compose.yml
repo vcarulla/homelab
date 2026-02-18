@@ -42,6 +42,7 @@ services:
       - "traefik.http.routers.linkding.rule=Host(`linkding.${DOMAIN_ICARUS}`)"
       - "traefik.http.routers.linkding.entrypoints=websecure"
       - "traefik.http.routers.linkding.tls=true"
+      - "traefik.http.routers.linkding.middlewares=security-headers@file"
       - "traefik.http.services.linkding.loadbalancer.server.port=9090"
       - "traefik.docker.network=frontend"
     restart: unless-stopped

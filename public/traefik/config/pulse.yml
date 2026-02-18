@@ -8,6 +8,7 @@ http:
       rule: "Host(`pulse.example.com`)"
       entrypoints: ["websecure"]
       service: "pulse-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
   services:

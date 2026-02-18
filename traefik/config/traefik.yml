@@ -31,9 +31,6 @@ entryPoints:
           scheme: https
   websecure:
     address: :443
-    http:
-      middlewares:
-        - "security-headers@file"
   metrics:
     address: :9090
 
