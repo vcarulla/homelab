@@ -8,6 +8,7 @@ http:
       rule: "Host(`dispatcharr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "dispatcharr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
   services:

@@ -90,15 +90,9 @@ traefik/certs/
 **/*.pfx
 
 ### Config files with sensitive data ###
-traefik/config/middlewares.yml
-traefik/config/mediacli.yml
-traefik/config/homeassistant.yml
-traefik/config/n8n.yml
-traefik/config/proxmox.yml
-traefik/config/pulse.yml
-traefik/config/dispatcharr.yml
-traefik/config/traefik-api.yml
-traefik/config/middlewares.yml.original
+traefik/config/*.yml
+!traefik/config/tls.yml
+!traefik/config/traefik.yml
 glance/config/glance.yml
 bind9/config/db.*.zone
 bind9/config/named.conf

@@ -78,6 +78,22 @@ template {
   command     = "echo '[$(date)] 🔭 Glance secrets updated by Shared Vault Agent'"
 }
 
+# Template for PostgreSQL service
+template {
+  source      = "/vault/config/templates/postgres.tpl"
+  destination = "/vault/secrets/postgres.env"
+  perms       = 0600
+  command     = "echo '[$(date)] PostgreSQL secrets updated by Shared Vault Agent'"
+}
+
+# Template for Authentik service
+template {
+  source      = "/vault/config/templates/authentik.tpl"
+  destination = "/vault/secrets/authentik.env"
+  perms       = 0600
+  command     = "echo '[$(date)] Authentik secrets updated by Shared Vault Agent'"
+}
+
 # Template for Speedtest Tracker (archivo en disco, no tmpfs - requerido por linuxserver s6)
 # Permisos 0644 porque docker-compose lee el env_file como usuario no-root
 template {

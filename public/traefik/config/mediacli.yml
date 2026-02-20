@@ -9,12 +9,14 @@ http:
       rule: "Host(`plex.media.example.com`)"
       entrypoints: ["websecure"]
       service: "plex-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     emby:
       rule: "Host(`emby.media.example.com`)"
       entrypoints: ["websecure"]
       service: "emby-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     # *arr Stack
@@ -22,24 +24,28 @@ http:
       rule: "Host(`sonarr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "sonarr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     radarr:
       rule: "Host(`radarr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "radarr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     prowlarr:
       rule: "Host(`prowlarr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "prowlarr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     bazarr:
       rule: "Host(`bazarr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "bazarr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     # Indexers
@@ -47,12 +53,14 @@ http:
       rule: "Host(`jackett.media.example.com`)"
       entrypoints: ["websecure"]
       service: "jackett-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     flaresolverr:
       rule: "Host(`flaresolverr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "flaresolverr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     # Download
@@ -60,6 +68,7 @@ http:
       rule: "Host(`qbittorrent.media.example.com`)"
       entrypoints: ["websecure"]
       service: "qbittorrent-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     # Request Management
@@ -67,18 +76,21 @@ http:
       rule: "Host(`jellyseerr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "jellyseerr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     ombi:
       rule: "Host(`ombi.media.example.com`)"
       entrypoints: ["websecure"]
       service: "ombi-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     requestrr:
       rule: "Host(`requestrr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "requestrr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
     # Dashboard
@@ -86,6 +98,7 @@ http:
       rule: "Host(`homarr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "homarr-service"
+      middlewares: ["security-headers@file"]
       tls: true
 
   services:

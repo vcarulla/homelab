@@ -1,0 +1,30 @@
+# Traefik configuration for OpenClaw (WebSocket app)
+# Copy to: traefik/config/openclaw.yml
+# Replace IPs and domains with your values
+# Note: Uses custom headers instead of security-headers to avoid
+# frameDeny breaking WebSocket connections
+
+http:
+  routers:
+    openclaw:
+      rule: "Host(`openclaw.example.com`)"
+      entrypoints: ["websecure"]
+      service: "openclaw-service"
+      tls: true
+      middlewares:
+        - "internal-access@file"
+        - "openclaw-headers"
+
+  middlewares:
+    openclaw-headers:
+      headers:
+        sslRedirect: true
+        contentTypeNosniff: true
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+  services:
+    openclaw-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.70:18789"

@@ -1,0 +1,160 @@
+---
+services:
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.12.3
+    container_name: authentik-server
+    command: server
+    user: root
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+    entrypoint: >
+      sh -c "
+      echo 'Authentik Server iniciando con Shared Vault Agent...';
+      if [ -f /run/secrets/authentik.env ]; then
+        echo 'Cargando secrets desde Shared Vault Agent...';
+        export \$$(grep -v '^#' /run/secrets/authentik.env | grep -v '^$$' | grep -v '^VAULT_' | xargs);
+        echo 'Variables de Authentik cargadas desde Vault';
+      else
+        echo 'ERROR: Vault Agent secrets no disponibles';
+        exit 1;
+      fi;
+      exec /lifecycle/ak server
+      "
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+      - AUTHENTIK_REDIS__HOST=homelab-redis
+      - AUTHENTIK_POSTGRESQL__HOST=homelab-postgres
+      - AUTHENTIK_POSTGRESQL__PORT=5432
+      - AUTHENTIK_LISTEN__HTTP=0.0.0.0:9000
+      - AUTHENTIK_LISTEN__HTTPS=0.0.0.0:9443
+      - AUTHENTIK_LOG_LEVEL=info
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+    volumes:
+      - authentik_data:/data
+      - authentik_media:/media
+      - vault_secrets_tmpfs:/run/secrets:ro
+    networks:
+      - frontend
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/-/health/live/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=frontend"
+      - "traefik.http.routers.authentik.rule=Host(`auth.${DOMAIN_ICARUS}`)"
+      - "traefik.http.routers.authentik.entrypoints=websecure"
+      - "traefik.http.routers.authentik.tls=true"
+      - "traefik.http.routers.authentik.middlewares=security-headers@file"
+      - "traefik.http.services.authentik.loadbalancer.server.port=9000"
+    restart: unless-stopped
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.12.3
+    container_name: authentik-worker
+    command: worker
+    user: root
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+      - KILL
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    entrypoint: >
+      sh -c "
+      echo 'Authentik Worker iniciando con Shared Vault Agent...';
+      if [ -f /run/secrets/authentik.env ]; then
+        echo 'Cargando secrets desde Shared Vault Agent...';
+        export \$$(grep -v '^#' /run/secrets/authentik.env | grep -v '^$$' | grep -v '^VAULT_' | xargs);
+        echo 'Variables de Authentik cargadas desde Vault';
+      else
+        echo 'ERROR: Vault Agent secrets no disponibles';
+        exit 1;
+      fi;
+      exec /lifecycle/ak worker
+      "
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ}
+      - AUTHENTIK_REDIS__HOST=homelab-redis
+      - AUTHENTIK_POSTGRESQL__HOST=homelab-postgres
+      - AUTHENTIK_POSTGRESQL__PORT=5432
+      - AUTHENTIK_LOG_LEVEL=info
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+      - AUTHENTIK_OUTPOSTS__DISCOVER=false
+    volumes:
+      - authentik_data:/data
+      - authentik_media:/media
+      - authentik_certs:/certs
+      - vault_secrets_tmpfs:/run/secrets:ro
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "ak healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+volumes:
+  authentik_data:
+    driver: local
+  authentik_media:
+    driver: local
+  authentik_certs:
+    driver: local
+  vault_secrets_tmpfs:
+    external: true
+    name: shared-vault-agent_vault_secrets_tmpfs
+
+networks:
+  frontend:
+    external: true
+  database:
+    external: true
