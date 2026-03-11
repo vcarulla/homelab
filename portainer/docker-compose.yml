@@ -1,7 +1,7 @@
 ---
 services:
   portainer:
-    image: portainer/portainer-ce:2.33.6
+    image: portainer/portainer-ce:2.39.0
     container_name: portainer
     # Portainer loads secrets from Shared Vault Agent tmpfs
     # Variables available from vault_secrets_tmpfs:/run/secrets:ro

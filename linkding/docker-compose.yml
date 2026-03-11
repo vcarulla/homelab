@@ -1,6 +1,6 @@
 services:
   linkding:
-    image: sissbruecker/linkding:1.44.1
+    image: sissbruecker/linkding:1.45.0
     container_name: "${LD_CONTAINER_NAME:-linkding}"
     entrypoint: >
       sh -c "
