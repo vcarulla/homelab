@@ -5,7 +5,7 @@
 
 services:
   vault-agent-shared:
-    image: hashicorp/vault:2.0
+    image: hashicorp/vault:2.0.3
     container_name: homelab-vault-agent
     user: "0:0"
 # Startup ordenado via healthcheck robusto y restart policy

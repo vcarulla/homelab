@@ -1,7 +1,7 @@
 ---
 services:
   vault:
-    image: hashicorp/vault:2.0
+    image: hashicorp/vault:2.0.3
     container_name: vault
     env_file:
       - ../.env
@@ -17,6 +17,13 @@ services:
       - frontend
     cap_add:
       - IPC_LOCK
+    ulimits:
+      # Vault 2.0.3 necesita mas memoria bloqueable que 2.0 para mlock;
+      # sin esto falla con "Failed to lock memory: cannot allocate memory".
+      # Mantiene mlock ACTIVO (secretos no van a swap) en vez de disable_mlock.
+      memlock:
+        soft: -1
+        hard: -1
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vault.rule=Host(`vault.${DOMAIN_ICARUS}`)"
