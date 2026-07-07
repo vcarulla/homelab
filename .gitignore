@@ -102,7 +102,6 @@ bind9/records/**
 shared-vault-agent/templates/middlewares.tpl
 logging/prometheus/config/prometheus.yml
 logging/promtail/config/config.yml
-homepage/sync-vault-to-env.sh
 
 ### Backups ###
 backup*.tar.gz

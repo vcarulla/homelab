@@ -90,10 +90,10 @@ Copy files from `public/` to their destinations and customize values.
 
 | Placeholder | Example | Description |
 |-------------|---------|-------------|
-| `192.168.1.X` | `10.10.1.77` | Your server IPs |
+| `192.168.1.X` | `10.0.0.10` | Your server IPs |
 | `example.com` | `yourdomain.com` | Your domain |
-| `server.example.com` | `icarus.yourdomain.com` | Server subdomain |
-| `media.example.com` | `orfeo.yourdomain.com` | Media server subdomain |
+| `server.example.com` | `server1.yourdomain.com` | Server subdomain |
+| `media.example.com` | `media.yourdomain.com` | Media server subdomain |
 
 ## Deployment Order
 
