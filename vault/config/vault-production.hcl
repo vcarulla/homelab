@@ -20,15 +20,16 @@ log_level = "INFO"
 log_format = "json"
 
 # Configuración de API y cluster
-api_addr = "http://0.0.0.0:8200"
+# api_addr es la URL que se anuncia a los clientes (no un bind): debe ser alcanzable
+api_addr = "http://vault:8200"
 cluster_addr = "http://127.0.0.1:8201"
 
 # TTL para tokens
 default_lease_ttl = "168h"    # 7 días
 max_lease_ttl = "720h"        # 30 días
 
-# Configuración de PID
-pid_file = "/vault/vault.pid"
+# Configuración de PID (en /tmp: el rootfs es read_only, /tmp es tmpfs)
+pid_file = "/tmp/vault.pid"
 
 # Configuración de telemetría (opcional)
 telemetry {

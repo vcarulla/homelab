@@ -20,7 +20,7 @@ log_level = "INFO"
 log_format = "json"
 
 # API and cluster configuration
-api_addr = "http://0.0.0.0:8200"
+api_addr = "http://vault:8200"
 cluster_addr = "http://127.0.0.1:8201"
 
 # Token TTL
@@ -28,7 +28,7 @@ default_lease_ttl = "168h"    # 7 days
 max_lease_ttl = "720h"        # 30 days
 
 # PID file
-pid_file = "/vault/vault.pid"
+pid_file = "/tmp/vault.pid"
 
 # Telemetry (optional - for Prometheus)
 telemetry {

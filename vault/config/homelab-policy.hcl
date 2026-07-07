@@ -42,6 +42,22 @@ path "secret/metadata/speedtest-tracker" {
   capabilities = ["read"]
 }
 
+# PostgreSQL secrets
+path "secret/data/postgres" {
+  capabilities = ["read"]
+}
+path "secret/metadata/postgres" {
+  capabilities = ["read"]
+}
+
+# Authentik secrets
+path "secret/data/authentik" {
+  capabilities = ["read"]
+}
+path "secret/metadata/authentik" {
+  capabilities = ["read"]
+}
+
 # Token renewal capabilities (required for auto-renewal)
 path "auth/token/renew-self" {
   capabilities = ["update"]
