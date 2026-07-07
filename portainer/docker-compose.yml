@@ -18,6 +18,18 @@ services:
     networks:
       - frontend
       - backend  # Acceso a socket-proxy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=50m
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
     healthcheck:
       test: ["CMD", "/portainer", "--version"]
       interval: 30s

@@ -1,8 +1,10 @@
 services:
   bind9:
     container_name: dns_bind9
-    image: ubuntu/bind9:latest
-    read_only: false
+    # Pin por digest (el repo solo publica :latest utilizable): BIND 9.20.11.
+    # Para actualizar: docker pull ubuntu/bind9:latest && docker inspect --format '{{.RepoDigests}}'
+    image: ubuntu/bind9@sha256:45d541e9688f2c9010d22a78200117b66ed2df31b78f3464876f7e6e15cfaf77
+    read_only: true
     cap_drop:
       - ALL
     cap_add:
@@ -11,7 +13,6 @@ services:
       - SETUID
     security_opt:
       - no-new-privileges:true
-      - apparmor:unconfined
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=50m
       - /var/run:rw,noexec,nosuid,size=50m
@@ -27,7 +28,7 @@ services:
           memory: 64M
     environment:
       - BIND9_USER=bind
-      - TZ="America/Argentina/Buenos_Aires"
+      - TZ=America/Argentina/Buenos_Aires
     working_dir: /tmp
     ports:
       - "53:53/tcp"

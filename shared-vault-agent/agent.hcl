@@ -7,6 +7,9 @@ pid_file = "/tmp/pidfile"
 # Vault server configuration
 vault {
   address = "http://vault:8200"
+  retry {
+    num_retries = 7
+  }
 }
 
 # Auto-authentication using AppRole
@@ -21,13 +24,20 @@ auto_auth {
     }
   }
   
-  # Token sink - where authenticated token is stored
+  # Token sink en /tmp (tmpfs privado del agente, lo usa solo el healthcheck).
+  # NO en /vault/secrets: ese tmpfs lo montan todos los servicios y el token
+  # tiene la homelab-policy completa.
   sink "file" {
     config = {
-      path = "/vault/secrets/token"
+      path = "/tmp/token"
       mode = 0600
     }
   }
+}
+
+# Si una key no existe en Vault, fallar en vez de renderizar string vacío
+template_config {
+  error_on_missing_key = true
 }
 
 # Template for Linkding service  

@@ -69,8 +69,13 @@ services:
     networks:
       - frontend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
     healthcheck:
-      test: ["CMD", "sh", "-c", "test -f /vault/secrets/token && test -f /vault/secrets/glance.env && test -f /vault/secrets/linkding.env && test -f /vault/secrets/postgres.env && test -f /vault/secrets/authentik.env"]
+      test: ["CMD", "sh", "-c", "test -f /tmp/token && test -f /vault/secrets/glance.env && test -f /vault/secrets/linkding.env && test -f /vault/secrets/postgres.env && test -f /vault/secrets/authentik.env"]
       interval: 15s
       timeout: 10s
       retries: 10  # Más reintentos para startup

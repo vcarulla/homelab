@@ -16,6 +16,23 @@ services:
       - ./data:/config
     networks:
       - frontend
+    security_opt:
+      - no-new-privileges:true
+    # s6-overlay (linuxserver) necesita chown/setuid para bajar a PUID/PGID;
+    # read_only no es viable con s6
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - FOWNER
+      - DAC_OVERRIDE
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-fSs", "http://localhost/api/healthcheck"]
       interval: 1m

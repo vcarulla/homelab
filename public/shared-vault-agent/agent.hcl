@@ -7,6 +7,9 @@ pid_file = "/tmp/pidfile"
 # Vault server configuration
 vault {
   address = "http://vault:8200"
+  retry {
+    num_retries = 7
+  }
 }
 
 # Auto-authentication using AppRole
@@ -24,10 +27,15 @@ auto_auth {
   # Token sink - where authenticated token is stored
   sink "file" {
     config = {
-      path = "/vault/secrets/token"
+      path = "/tmp/token"
       mode = 0600
     }
   }
+}
+
+# Si una key no existe en Vault, fallar en vez de renderizar string vacio
+template_config {
+  error_on_missing_key = true
 }
 
 # Template for Linkding service

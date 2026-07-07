@@ -1,10 +1,11 @@
+---
 # ~/hlab/socket-proxy/docker-compose.yml
 
 services:
   socket-proxy:
     container_name: socket-proxy
     image: tecnativa/docker-socket-proxy:v0.4.2
-    
+
     # --- HARDENING DE SEGURIDAD ENTERPRISE ---
     read_only: true  # Filesystem solo lectura, previene modificaciones maliciosas
     security_opt:
@@ -14,7 +15,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=10m  # Directorio temporal en memoria, sin ejecución
       - /run:rw,noexec,nosuid,size=10m  # Directorio para pidfiles de HAProxy
-    
+
     environment:
       # --- PERMISOS DE SOLO LECTURA ---
       # 1 = Habilitado, 0 = Deshabilitado (por defecto)
@@ -43,11 +44,16 @@ services:
       # --- VERIFICACIÓN DE SEGURIDAD ---
       # Asegurarse de que todas las demás llamadas (crear, borrar, ejecutar) están deshabilitadas.
       # La imagen lo hace por defecto, pero ser explícito no está de más.
-      - POST=0 # Bloquea la mayoría de las acciones de escritura
+      - POST=0  # Bloquea la mayoría de las acciones de escritura
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 2375 || exit 1"]  # Verificar puerto TCP del proxy
       interval: 30s
