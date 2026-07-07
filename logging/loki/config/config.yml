@@ -1,3 +1,4 @@
+---
 # hlab/logging/loki/config/config.yml
 # Configuración moderna para Loki en modo single-node con retención.
 
@@ -19,23 +20,35 @@ common:
     kvstore:
       store: inmemory
 
-# Configuración del esquema para usar boltdb-shipper
+# Esquema: boltdb-shipper (v12) histórico + migración a tsdb (v13, actual
+# recomendado en Loki 3.x). Los datos viejos se siguen leyendo con el schema
+# vigente en su fecha.
 schema_config:
   configs:
-    - from: "2024-01-01" # Una fecha en el pasado es suficiente
+    - from: "2024-01-01"
       store: boltdb-shipper
       object_store: filesystem
       schema: v12
       index:
         prefix: index_
         period: 24h
+    - from: "2026-07-15"
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: tsdb_index_
+        period: 24h
 
-# Configuración de almacenamiento para boltdb-shipper
+# Almacenamiento para ambos stores
 storage_config:
   boltdb_shipper:
     active_index_directory: /loki/boltdb-shipper-active
     cache_location: /loki/boltdb-shipper-cache
     # No es necesario un "shared_store" en modo single-node filesystem
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
   filesystem:
     directory: /loki/chunks
 
@@ -48,7 +61,7 @@ compactor:
 
 # Límites y período de retención
 limits_config:
-  retention_period: 168h # 7 días
+  retention_period: 168h  # 7 días
   reject_old_samples: true
   reject_old_samples_max_age: 168h
   allow_structured_metadata: false

@@ -13,9 +13,23 @@ services:
       - ./config/config.yml:/etc/promtail/config.yml:ro
       # Traefik logs
       - ../../traefik/logs:/var/log/traefik:ro
+      # Positions persistentes (en /tmp se perdían al recrear el contenedor)
+      - promtail_positions:/positions
     networks:
       - frontend
       - backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # Los logs json de docker pertenecen a root con modo restrictivo
+      - DAC_READ_SEARCH
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
     healthcheck:
       test: ["CMD-SHELL", "pgrep promtail || exit 1"]
       interval: 1m
@@ -32,6 +46,10 @@ services:
       - -config.file=/etc/promtail/config.yml
       - -log.format=json
     restart: unless-stopped
+
+volumes:
+  promtail_positions:
+    driver: local
 
 networks:
   frontend:

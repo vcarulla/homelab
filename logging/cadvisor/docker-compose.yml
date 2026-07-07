@@ -1,24 +1,46 @@
 ---
 services:
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    # Pin explícito; para actualizar mirar releases de google/cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
     container_name: cadvisor
     profiles:
       - disabled
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - TZ=${TZ}
-    ports:
-      - "8081:8080"
+    # Sin ports: Prometheus scrapea cadvisor:8080 por la red docker.
+    # Metadata de Docker via socket-proxy (antes se colaba el socket real
+    # con el mount de /var/run).
+    command:
+      - --docker=tcp://socket-proxy:2375
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # Lectura de cgroups/fs del host propiedad de otros uids
+      - DAC_READ_SEARCH
+      - DAC_OVERRIDE
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
     networks:
       - frontend
       - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     logging:
       driver: "json-file"
       options:

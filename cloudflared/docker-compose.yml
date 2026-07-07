@@ -1,10 +1,29 @@
+---
+# ⚠️ DESACTIVADO (profiles: disabled). Para activar:
+#   1. Definir TUNNEL_TOKEN (idealmente via Vault Agent; como mínimo en ./.env
+#      symlink a ../.env). Hoy NO está definido en ningún lado.
+#   2. docker compose --profile disabled up -d
 services:
   cloudflaredtunnel:
     container_name: cloudflaredtunnel
     image: cloudflare/cloudflared:2026.5.0
+    profiles:
+      - disabled
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
-    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=10m
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
     networks:
       - frontend
       - backend

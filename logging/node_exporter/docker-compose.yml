@@ -12,6 +12,15 @@ services:
     volumes:
       - /:/host:ro,rslave
     network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD-SHELL", "pgrep node_exporter || exit 1"]
       interval: 1m

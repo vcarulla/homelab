@@ -19,6 +19,15 @@ services:
     networks:
       - frontend
       - backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
       interval: 1m
@@ -35,7 +44,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.loki.rule=Host(`loki.${DOMAIN_DEDALO}`)"
       - "traefik.http.routers.loki.entrypoints=websecure"
-      - "traefik.http.routers.loki.tls.certresolver=cloudflare"
+      - "traefik.http.routers.loki.tls=true"
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
       - "traefik.docker.network=frontend"
     restart: unless-stopped
