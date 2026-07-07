@@ -28,10 +28,11 @@ Este proyecto despliega **HashiCorp Vault** como solución centralizada de gesti
 vault/
 ├── docker-compose.yml          # Servicio Vault en Docker
 ├── README.md                   # Esta documentación
+├── admin-policy.hcl            # Política de administrador
 ├── config/
-│   ├── vault.hcl              # Configuración de Vault
-│   ├── homelab-policy.hcl     # Política para servicios
-│   └── admin-policy.hcl       # Política de administrador
+│   ├── vault-production.hcl   # Configuración activa de Vault
+│   ├── homelab-policy.hcl     # Política para servicios de icarus
+│   └── mediacli-policy.hcl    # Política para el stack mediacli (orfeo)
 └── data/                      # Datos persistentes (auto-creado)
 ```
 
@@ -41,7 +42,7 @@ vault/
 
 Ver `examples/vault/docker-compose.yml` para una plantilla de configuración.
 
-### Archivo de configuración `vault.hcl`
+### Archivo de configuración `config/vault-production.hcl`
 
 ```hcl
 storage "file" {
@@ -50,12 +51,14 @@ storage "file" {
 
 listener "tcp" {
   address       = "0.0.0.0:8200"
-  tls_disable   = "true"  # Traefik maneja TLS
+  tls_disable   = true  # Traefik maneja TLS
 }
 
 ui = true
 log_level = "INFO"
 log_format = "json"
+
+api_addr = "http://vault:8200"
 
 default_lease_ttl = "168h"
 max_lease_ttl = "720h"

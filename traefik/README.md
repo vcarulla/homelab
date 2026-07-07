@@ -1,159 +1,173 @@
-## Proyecto Traefik v3.4.0 con Docker Compose 🌊
+# Traefik v3 - Reverse Proxy del Homelab
 
-Este proyecto despliega **Traefik v3.4.0** como proxy inverso en Docker Compose, integrado con DNS de Cloudflare para emitir certificados ACME automáticamente. Ideal para enrutar tráfico HTTP/HTTPS a los servicios internos.
+Este proyecto despliega **Traefik v3** como proxy inverso en Docker Compose. A diferencia del setup clásico con ACME, aquí los **certificados TLS vienen de Vault** (renderizados por el Shared Vault Agent a un tmpfs compartido) y el acceso a la API de Docker pasa por **socket-proxy**, nunca montando `docker.sock` directamente.
 
 ---
 
-### Estructura del repositorio 🗂️
+## Estructura del repositorio
 
 ```
-├── .env                   # Variables de entorno (Cloudflare API Token)
-├── certs                  # Directorio para almacenamiento ACME (cloudflare-acme.json y certs)
-├── config
-│   └── traefik.yml        # Configuración principal de Traefik
+traefik/
+├── config/
+│   ├── traefik.yml        # Configuración estática
+│   ├── middlewares.yml    # Middlewares dinámicos (auth-basic, rate-limit, internal-access, authentik-forward-auth, security-headers...)
+│   ├── tls.yml            # Certificados desde el tmpfs de Vault Agent
+│   ├── traefik-api.yml    # Config dinámica adicional
+│   └── *.yml              # Routers file-provider para hosts externos (proxmox, homeassistant, pulse, openclaw, n8n...)
+├── logs/                  # Access logs (volumen traefik_logs)
 └── docker-compose.yml     # Definición del servicio Traefik
 ```
 
----
-
-### 1. Archivo `.env`
-
-Definir las credenciales sensibles para administración de DNS:
-
-```dotenv
-# Token de API de Cloudflare con permisos DNS
-CLOUDFLARE_DNS_API_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-> **Importante:** No versionar este archivo. Añadir a `.gitignore`.
+El file provider observa `/etc/traefik` (`watch: true`): los cambios en los `.yml` dinámicos se recargan solos. Los cambios en **labels Docker** requieren `docker compose down && up -d`.
 
 ---
 
-### 2. `docker-compose.yml`
+## Certificados TLS (sin ACME)
 
-Describe el servicio **traefik**:
+No hay `certificatesResolvers` activos. El flujo es:
+
+1. Los certificados viven en Vault (`secret/certificates/...`).
+2. El Shared Vault Agent los renderiza al tmpfs compartido (`/vault/secrets/certs/`).
+3. Traefik monta ese tmpfs **read-only** y los carga vía `config/tls.yml`:
 
 ```yaml
-version: '3.8'
-services:
-  traefik:
-    container_name: traefik
-    image: traefik:v3.4.0
-    env_file:
-      - ./.env
-    environment:
-      - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
-    ports:
-      - 80:80        # HTTP
-      - 443:443      # HTTPS
-      - 8080:8080    # Dashboard
-    volumes:
-      - /run/docker.sock:/run/docker.sock:ro    # Acceso a la API de Docker
-      - ./config/:/etc/traefik/:ro              # Configuración estática
-      - ./certs/:/var/traefik/certs/:rw         # Almacenamiento de certificados
-    networks:
-      - frontend                                # Red expuesta
-    restart: unless-stopped
-
-networks:
-  frontend:
-    external: true
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true
+  certificates:
+    - certFile: /vault/secrets/certs/fullchain.crt
+      keyFile: /vault/secrets/certs/server.key
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /vault/secrets/certs/fullchain.crt
+        keyFile: /vault/secrets/certs/server.key
 ```
 
-* **env\_file**: carga de variables de entorno.
-* **CF\_DNS\_API\_TOKEN**: utilizado por `dnsChallenge`.
-* **volumes**: montajes para configuración, certs y acceso a Docker.
+- **TLS mínimo 1.2** + `sniStrict: true`.
+- Los certificados nunca tocan disco: viven en memoria (tmpfs).
+
+Para rotar certificados: actualizar el secret en Vault, el agente re-renderiza; luego `cd traefik && docker compose down && docker compose up -d`.
 
 ---
 
-### 3. `config/traefik.yml` (Configuración estática)
+## Configuración estática (`config/traefik.yml`)
+
+Puntos clave (leer el archivo para el detalle completo):
 
 ```yaml
-# Habilita comprobaciones y logs
-global:
-  checkNewVersion: true
-  sendAnonymousUsage: false
 log:
-  level: DEBUG
+  level: INFO
+  format: json
 
-# Panel de control
+accesslog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  filters:
+    statusCodes: ["400-499", "500-599"]   # solo errores
+
 api:
   dashboard: true
-  insecure: true
+  insecure: false        # dashboard SOLO via router HTTPS con middlewares
 
-# EntryPoints para HTTP/HTTPS
 entryPoints:
-  web:
-    address: :80
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-  websecure:
-    address: :443
+  web:                   # :80 → redirect a websecure
+  websecure:             # :443
+  metrics:               # :9090, NO publicado al host
 
-# Emisión de certificados ACME con DNS Challenge
-certificatesResolvers:
-  cloudflare:
-    acme:
-      email: YOUR_EMAIL@domain.com
-      storage: /var/traefik/certs/cloudflare-acme.json
-      caServer: "https://acme-v02.api.letsencrypt.org/directory"
-      dnsChallenge:
-        provider: cloudflare
-        delayBeforeCheck: "30"
-        resolvers:
-          - "1.1.1.1:53"
-          - "8.8.8.8:53"
-
-# Proveedores de rutas
 providers:
   docker:
-    exposedByDefault: false    # Solo servicios etiquetados
-    network: frontend          # Red de descubrimiento
+    endpoint: "tcp://socket-proxy:2375"   # API Docker via socket-proxy
+    exposedByDefault: false
+    network: frontend
   file:
-    directory: /etc/traefik    # Archivos dinámicos si se requieren
+    directory: /etc/traefik
     watch: true
+
+ping:
+  entryPoint: metrics    # /ping fuera del entrypoint público
+
+metrics:
+  prometheus:
+    entryPoint: metrics
 ```
 
-* **entryPoints**: define redireccionamiento HTTP → HTTPS.
-* **certificatesResolvers**: configuración ACME con Cloudflare DNS Challenge.
-* **providers**: detecta contenedores Docker en la red `frontend`, y opcionalmente archivos estáticos.
+- **`api.insecure: false`**: no hay puerto 8080. El dashboard se sirve por HTTPS (ver abajo).
+- **`ping` en `metrics` (:9090)**: el healthcheck del contenedor (`traefik healthcheck --ping`) no pasa por el redirect 308 de web→websecure. El puerto 9090 no está publicado al host.
+- **socket-proxy**: Traefik habla con la API de Docker por TCP contra `socket-proxy:2375` (red backend), con permisos mínimos.
 
 ---
 
-## Despliegue y comprobación 🛠️
+## Dashboard
 
-1. Crear o asegurar la existencia de la red Docker `frontend`:
+El dashboard va detrás de HTTPS con cadena de middlewares, definido por labels en `docker-compose.yml`:
 
-   ```bash
-   docker network create frontend
-   ```
-2. Copiar el token de Cloudflare en `.env`.
-3. Levantar Traefik:
+```yaml
+- "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_ICARUS}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+- "traefik.http.routers.dashboard.entrypoints=websecure"
+- "traefik.http.routers.dashboard.tls=true"
+- "traefik.http.routers.dashboard.middlewares=internal-access@file,rate-limit@file,auth-basic@file,security-headers@file"
+- "traefik.http.routers.dashboard.service=api@internal"
+```
 
-   ```bash
-   docker-compose up -d
-   ```
-4. Verificar los logs:
+Middlewares aplicados (definidos en `config/middlewares.yml`):
 
-   ```bash
-   docker logs -f traefik
-   ```
-5. Acceder al **Dashboard** en: http\://\<IP-servidor>:8080/dashboard/
+| Middleware | Función |
+|---|---|
+| `internal-access@file` | Whitelist de IPs internas |
+| `rate-limit@file` | Rate limiting |
+| `auth-basic@file` | Basic auth (credenciales desde Vault) |
+| `security-headers@file` | Headers de seguridad HTTP |
+
+Acceso: `https://traefik.${DOMAIN_ICARUS}/dashboard/` (solo desde red interna).
+
+> `security-headers@file` se aplica **por router**, no globalmente en el entrypoint (permite excepciones como OpenClaw sin frameDeny).
 
 ---
 
-### Flujo de enrutamiento
+## Hardening del contenedor
+
+Del `docker-compose.yml`:
+
+- `read_only: true` + tmpfs en `/tmp`
+- `cap_drop: ALL` + solo `NET_BIND_SERVICE` (puertos 80/443)
+- `no-new-privileges:true`
+- Límites de recursos (1 CPU / 512M)
+- Certificados montados `:ro` desde el volumen externo `shared-vault-agent_vault_secrets_tmpfs`
+
+---
+
+## Despliegue y comprobación
+
+```bash
+# Prerequisitos: redes frontend/backend, vault + shared-vault-agent corriendo
+docker network create frontend
+docker network create backend
+
+cd traefik && docker compose --env-file ../.env up -d
+
+# Logs
+docker logs -f traefik
+
+# Verificar que los certificados están en el tmpfs
+docker exec traefik ls -la /vault/secrets/certs/
+```
+
+Ante cambios en labels o middlewares: **siempre `down && up -d`**, nunca `restart`.
+
+---
+
+## Flujo de enrutamiento
 
 ```text
-[Internet]
+[Cliente]
    |
-   v  (80/443)
-[Traefik]
+   v  (80 → redirect 443)
+[Traefik :443]  ← certificados desde /vault/secrets/certs (tmpfs de Vault Agent)
    |
-   +--> servicios en la red 'frontend' según etiquetas y reglas
-   |
-   +--> ACME (Let's Encrypt) via Cloudflare DNS Challenge → `certs/cloudflare-acme.json`
+   +--> servicios Docker en red 'frontend' (labels, via socket-proxy)
+   +--> hosts externos via file provider (proxmox, homeassistant, pulse, ...)
+   +--> forward-auth a Authentik (authentik-forward-auth@file) donde aplica
 ```

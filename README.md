@@ -8,23 +8,30 @@
 ## Architecture Overview
 
 ```
+├── authentik/             # SSO / Identity Provider (server + worker)
 ├── bind9/                 # Local DNS server (BIND9)
-├── cloudflared/           # Cloudflare Zero Trust tunnel
-├── traefik/               # Reverse proxy with ACME certificates
+├── cloudflared/           # Cloudflare Zero Trust tunnel (disabled)
+├── traefik/               # Reverse proxy (certificates from Vault Agent)
 ├── portainer/             # Container management UI
-├── clamav/                # Open source antivirus
+├── postgres/              # PostgreSQL (Authentik database)
+├── redis/                 # Redis (Authentik cache/broker)
+├── clamav/                # Open source antivirus (disabled)
 ├── linkding/              # Self-hosted bookmark manager
 ├── glance/                # Dashboard with custom widgets
 ├── socket-proxy/          # Docker socket security proxy
 ├── vault/                 # Centralized secrets management
 ├── shared-vault-agent/    # Vault Agent sidecar (shared secrets)
 ├── speedtest-tracker/     # Internet speed monitoring
-└── logging/               # Observability stack (paused)
+└── logging/               # Observability stack (disabled)
     ├── prometheus/        # Metrics collection
     ├── grafana/           # Dashboards
     ├── loki/              # Log aggregation
     └── ...
 ```
+
+> `cloudflared/`, `clamav/` and everything under `logging/` are behind
+> `profiles: disabled` in their compose files: they don't start with a plain
+> `docker compose up -d` (require `--profile disabled`).
 
 ---
 
@@ -67,6 +74,7 @@ cd homelab
 # Create shared Docker networks
 docker network create frontend
 docker network create backend
+docker network create database   # PostgreSQL / Redis / Authentik
 
 # Create global .env from template
 cp public/.env.example .env
@@ -108,10 +116,17 @@ cd bind9 && dcu && cd ..
 # 4. Reverse proxy
 cd traefik && dcu && cd ..
 
-# 5. Management
+# 5. Databases (required by Authentik)
+cd postgres && dcu && cd ..
+cd redis && dcu && cd ..
+
+# 6. SSO / Identity Provider (needs traefik + postgres + redis running)
+cd authentik && dcu && cd ..
+
+# 7. Management
 cd portainer && dcu && cd ..
 
-# 6. Services
+# 8. Services
 cd glance && dcu && cd ..
 cd linkding && dcu && cd ..
 cd speedtest-tracker && dcu && cd ..
@@ -150,27 +165,28 @@ See `public/README.md` for complete file mapping and setup instructions.
 ```
                     [Internet]
                         |
-               [Cloudflare Zero Trust]
-                        |
-                [cloudflared tunnel]
+               [Cloudflare Zero Trust]     (cloudflared: disabled)
                         |
     ┌───────────────────────────────────────────────┐
     │               Traefik (443/80)                │
-    │          (reverse proxy + ACME)               │
+    │      (reverse proxy + TLS from Vault)         │
     └─────────────────────┬─────────────────────────┘
                           │
         ┌─────────────────┼─────────────────┐
         │                 │                 │
-    [frontend]        [backend]         [docker.sock]
+    [frontend]        [backend]         [database]
         │                 │                 │
-   ┌────┴─────┐       ┌───┴───────┐       ┌─┴───────┐
-   │ glance   │       │ bind9     │       │ socket- │
-   │ portainer│       │ loki      │       │ proxy   │
-   │ grafana  │       │ prometheus│       └─────────┘
-   │ linkding │       │ clamav    │
-   │ vault    │       └───────────┘
-   └──────────┘
+   ┌────┴─────┐       ┌───┴───────┐    ┌────┴──────┐
+   │ glance   │       │ bind9     │    │ postgres  │
+   │ portainer│       │ socket-   │    │ redis     │
+   │ authentik│       │  proxy    │    │ authentik │
+   │ linkding │       │ clamav*   │    │  worker   │
+   │ vault    │       └───────────┘    └───────────┘
+   └──────────┘        * disabled
 ```
+
+Traefik reaches the Docker API through `socket-proxy` (backend network), never
+mounting `docker.sock` directly.
 
 ---
 
@@ -186,16 +202,18 @@ See `public/README.md` for complete file mapping and setup instructions.
 - SSL certificates (fullchain, private key, CA)
 - Traefik basic auth credentials
 - Service API tokens (Portainer, Proxmox, etc.)
+- PostgreSQL and Authentik credentials (`postgres.env`, `authentik.env`)
 - Dashboard configurations
 
 ---
 
 ## Security Layers
 
-- **Network**: Docker frontend/backend segmentation
+- **Network**: Docker frontend/backend/database segmentation
 - **Socket**: Read-only proxy for controlled daemon access
-- **TLS**: Automatic Let's Encrypt via DNS Challenge
-- **Antivirus**: ClamAV with automatic host scanning
+- **TLS**: Certificates stored in Vault, rendered to tmpfs by Vault Agent
+- **SSO**: Authentik (forward-auth middleware + OAuth2/OIDC)
+- **Antivirus**: ClamAV with automatic host scanning (disabled)
 - **Access**: IP whitelisting in Traefik middlewares
 - **Secrets**: Vault with centralized credential management
 
@@ -262,12 +280,14 @@ docker logs vault
 
 - **Virtualization**: Proxmox VE 8.x
 - **Containers**: Docker Engine 24.x + Docker Compose 2.x
-- **Proxy**: Traefik v3 with automatic ACME
+- **Proxy**: Traefik v3 (TLS certificates from Vault Agent tmpfs)
+- **SSO / IdP**: Authentik (server + worker)
+- **Databases**: PostgreSQL + Redis (Authentik backend)
 - **DNS**: BIND9
 - **Secrets**: HashiCorp Vault + Agent
 - **Dashboard**: Glance with custom widgets
-- **Antivirus**: ClamAV
-- **Observability**: Prometheus + Grafana + Loki (optional)
+- **Antivirus**: ClamAV (disabled)
+- **Observability**: Prometheus + Grafana + Loki (disabled)
 
 ---
 
