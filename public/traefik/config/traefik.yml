@@ -7,7 +7,7 @@ global:
   sendAnonymousUsage: false
 
 log:
-  level: DEBUG
+  level: INFO
   format: json
 
 accesslog:
@@ -61,7 +61,7 @@ providers:
     watch: true
 
 ping:
-  entryPoint: web
+  entryPoint: metrics
 
 metrics:
   prometheus:

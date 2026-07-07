@@ -3,6 +3,10 @@
 # Certificates are loaded from Vault Agent tmpfs
 
 tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true
   certificates:
     - certFile: /vault/secrets/certs/fullchain.crt  # From Shared Vault Agent tmpfs
       keyFile: /vault/secrets/certs/server.key      # Certificates in encrypted memory

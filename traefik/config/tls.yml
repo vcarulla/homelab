@@ -1,4 +1,9 @@
+---
 tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true
   certificates:
     - certFile: /vault/secrets/certs/fullchain.crt  # Desde tmpfs del Shared Vault Agent
       keyFile: /vault/secrets/certs/server.key     # Certificados en memoria encriptada

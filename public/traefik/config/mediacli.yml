@@ -53,14 +53,14 @@ http:
       rule: "Host(`jackett.media.example.com`)"
       entrypoints: ["websecure"]
       service: "jackett-service"
-      middlewares: ["security-headers@file"]
+      middlewares: ["internal-access@file", "security-headers@file"]
       tls: true
 
     flaresolverr:
       rule: "Host(`flaresolverr.media.example.com`)"
       entrypoints: ["websecure"]
       service: "flaresolverr-service"
-      middlewares: ["security-headers@file"]
+      middlewares: ["internal-access@file", "security-headers@file"]
       tls: true
 
     # Download
@@ -68,7 +68,7 @@ http:
       rule: "Host(`qbittorrent.media.example.com`)"
       entrypoints: ["websecure"]
       service: "qbittorrent-service"
-      middlewares: ["security-headers@file"]
+      middlewares: ["internal-access@file", "security-headers@file"]
       tls: true
 
     # Request Management
