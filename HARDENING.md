@@ -63,7 +63,13 @@ changelog ni rollback claro.
 - Un estado degradado (Vault sealed, DB caída) **debe** verse como unhealthy.
   Señal honesta > dashboard verde.
 - Verificar qué binarios trae la imagen (authentik no tiene `wget`, usar `curl`;
-  alpine tiene `wget` de busybox).
+  emby no tiene ni `curl` ni `wget` — check de proceso; alpine tiene `wget`
+  de busybox).
+- **`pgrep X || exit 0` es un check que nunca falla** — y encima esconde que
+  `X` sea el proceso equivocado. Nos pasó con recyclarr: el daemon real es
+  `supercronic` (la app solo corre cuando dispara el cron), así que
+  `pgrep recyclarr` no matchea nunca. Chequear el proceso que de verdad
+  sostiene el contenedor, y siempre `|| exit 1`.
 
 ---
 
@@ -74,7 +80,7 @@ changelog ni rollback claro.
 | Tipo de servicio | cap_add necesarias | Por qué |
 |---|---|---|
 | App simple no-root o root que solo escribe en su volumen (portainer, redis, glance, cloudflared, loki, grafana) | *(ninguna)* | No hacen syscalls privilegiadas |
-| Proceso root que escribe archivos de **otro uid** (linkding con `./data` de uid 1000) | `DAC_OVERRIDE` | Sin ella, root NO bypasea permisos de archivo (sqlite: "readonly database") |
+| Proceso root que escribe archivos de **otro uid** (linkding con `./data` de uid 1000, jellyseerr con `/app/config`) | `DAC_OVERRIDE` | Sin ella, root NO bypasea permisos de archivo (sqlite: "readonly database", jellyseerr: EACCES en settings) |
 | Lector de archivos ajenos **solo lectura** (promtail, clamav, cadvisor) | `DAC_READ_SEARCH` | Como DAC_OVERRIDE pero sin permitir escritura — preferirla siempre que alcance |
 | Entrypoint root que baja privilegios (vault, bind9) | `SETUID`, `SETGID` (+ `CHOWN` si el entrypoint chownea dirs) | su-exec/setuid() para dropear a usuario de servicio |
 | linuxserver.io / s6-overlay (speedtest-tracker, \*arr) | `CHOWN`, `SETUID`, `SETGID`, `FOWNER`, `DAC_OVERRIDE` | s6 ajusta ownership a PUID/PGID en el arranque. **read_only NO es viable** con s6 |
