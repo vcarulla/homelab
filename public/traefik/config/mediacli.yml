@@ -72,10 +72,10 @@ http:
       tls: true
 
     # Request Management
-    jellyseerr:
-      rule: "Host(`jellyseerr.media.example.com`)"
+    seerr:
+      rule: "Host(`seerr.media.example.com`)"
       entrypoints: ["websecure"]
-      service: "jellyseerr-service"
+      service: "seerr-service"
       middlewares: ["security-headers@file"]
       tls: true
 
@@ -152,7 +152,7 @@ http:
           - url: "http://192.168.1.100:8080"
 
     # Request Management
-    jellyseerr-service:
+    seerr-service:
       loadBalancer:
         servers:
           - url: "http://192.168.1.100:5055"
