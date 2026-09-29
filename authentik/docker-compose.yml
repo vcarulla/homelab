@@ -34,6 +34,7 @@ services:
         echo 'ERROR: Vault Agent secrets no disponibles';
         exit 1;
       fi;
+      sh /wait-for-postgres.sh;
       exec /lifecycle/ak server
       "
     env_file:
@@ -48,6 +49,7 @@ services:
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
     volumes:
+      - ./wait-for-postgres.sh:/wait-for-postgres.sh:ro
       - authentik_data:/data
       - authentik_media:/media
       - vault_secrets_tmpfs:/run/secrets:ro
@@ -110,6 +112,7 @@ services:
         echo 'ERROR: Vault Agent secrets no disponibles';
         exit 1;
       fi;
+      sh /wait-for-postgres.sh;
       exec /lifecycle/ak worker
       "
     env_file:
@@ -123,6 +126,7 @@ services:
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_OUTPOSTS__DISCOVER=false
     volumes:
+      - ./wait-for-postgres.sh:/wait-for-postgres.sh:ro
       - authentik_data:/data
       - authentik_media:/media
       - authentik_certs:/certs
