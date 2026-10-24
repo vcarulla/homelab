@@ -2,7 +2,7 @@
 services:
   traefik:
     container_name: traefik
-    image: traefik:v3.7.1
+    image: traefik:v3.7.16
     read_only: true
     security_opt:
       - no-new-privileges:true

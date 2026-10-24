@@ -1,7 +1,7 @@
 ---
 services:
   authentik-server:
-    image: ghcr.io/goauthentik/server:2026.5.4
+    image: ghcr.io/goauthentik/server:2026.8.5
     container_name: authentik-server
     command: server
     user: root
@@ -57,7 +57,7 @@ services:
       - frontend
       - database
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9000/-/health/live/ || exit 1"]
+      test: ["CMD-SHELL", "ak healthcheck || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -78,7 +78,7 @@ services:
     restart: unless-stopped
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.5.4
+    image: ghcr.io/goauthentik/server:2026.8.5
     container_name: authentik-worker
     command: worker
     user: root
